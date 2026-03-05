@@ -19,8 +19,8 @@ const cursosEjemplo = [
   },
   {
     id: 3,
-    title: "Manejo de Equipos",
-    description: "Uso correcto de equipos en campo.",
+    title: "Introduccion a la extraccion de crudo",
+    description: "Domina los fundamentos técnicos y operativos del proceso de producción petrolera en tierra (Onshore) y alta mar (Offshore).",
     category: "Equipos",
     image: "/images/equipos.jpg",
   },
