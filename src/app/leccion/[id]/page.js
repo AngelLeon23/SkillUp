@@ -3,7 +3,7 @@ import LessonView from "@/Componentes/LessonView";
 import { useRouter } from "next/navigation";
 
 const cursoEjemplo = {
-  id: 1,
+  id: 3,
   title: "Introducción a la Extracción de Crudo",
   description: "Domina los fundamentos técnicos y operativos del proceso de producción petrolera en tierra (Onshore) y alta mar (Offshore)",
   modulesList: [

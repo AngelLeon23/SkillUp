@@ -1,38 +1,24 @@
 "use client";
 import { User, Mail, Calendar, Award, BookOpen, CheckCircle2, Edit } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-export default function UserProfile({ user, userProgress, courses }) {
+export default function UserProfile({ user, userProgress, courses, certificados }) {
+  const router = useRouter();
   const enrolledCourses = Object.keys(userProgress).filter((id) => userProgress[id] > 0).length;
   const completedCourses = Object.keys(userProgress).filter((id) => userProgress[id] === 100).length;
   const inProgressCourses = enrolledCourses - completedCourses;
 
-  const achievements = [
-    {
-      id: 1,
-      title: 'Seguridad industrial',
-      description: 'Certificado',
-      icon: Award,
-      earned: enrolledCourses > 0,
-      color: 'blue',
-    },
-    {
-      id: 2,
-      title: 'Operaciones en plataforma',
-      description: 'Certificado',
-      icon: Award,
-      earned: completedCourses >= 3,
-      color: 'yellow',
-    },
-    {
-      id: 3,
-      title: 'Introduccion ala extraccion de crudo',
-      description: 'Certificado',
-      icon: Award,
-      earned: false,
-      color: 'green',
-    },
-
-  ];
+  const achievements = certificados.length > 0
+    ? certificados.map((cert) => ({
+        id: cert.id_certificado,
+        certId: cert.id_certificado,
+        title: cert.inscripciones?.cursos?.nombre ?? 'Curso',
+        description: `Emitido: ${cert.fecha_emision}`,
+        icon: Award,
+        earned: true,
+        color: 'yellow',
+      }))
+    : [];
 
   const recentActivity = [
     {
@@ -106,50 +92,41 @@ export default function UserProfile({ user, userProgress, courses }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Achievements */}
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Award className="w-6 h-6 text-yellow-600" />
-            Certificados
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {achievements.map((achievement) => {
-              const Icon = achievement.icon;
-              return (
-                <div
-                  key={achievement.id}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    achievement.earned
-                      ? 'border-yellow-400 bg-yellow-50'
-                      : 'border-gray-200 bg-gray-50 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        achievement.earned
-                          ? `bg-${achievement.color}-100`
-                          : 'bg-gray-200'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 ${
-                          achievement.earned
-                            ? `text-${achievement.color}-600`
-                            : 'text-gray-400'
-                        }`}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-sm text-gray-900 mb-1">
-                        {achievement.title}
-                      </h4>
-                      <p className="text-xs text-gray-600">{achievement.description}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+    <Award className="w-6 h-6 text-yellow-600" />
+    Certificados
+  </h3>
+  {achievements.length === 0 ? (
+    <div className="text-center py-8 text-gray-400">
+      <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
+      <p className="text-sm">Aún no tienes certificados.</p>
+      <p className="text-xs mt-1">Completa un curso para obtener el tuyo.</p>
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {achievements.map((achievement) => {
+        const Icon = achievement.icon;
+        return (
+          <div
+            key={achievement.id}
+            onClick={() => achievement.certId && router.push(`/certificado/${achievement.certId}`)}
+            className="p-4 rounded-lg border-2 border-yellow-400 bg-yellow-50 cursor-pointer hover:shadow-md transition-all"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-yellow-100">
+                <Icon className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm text-gray-900 mb-1">{achievement.title}</h4>
+                <p className="text-xs text-gray-600">{achievement.description}</p>
+              </div>
+            </div>
           </div>
-        </div>
+        );
+      })}
+    </div>
+  )}
+</div>
 
         {/* Recent Activity */}
         <div className="bg-white rounded-xl shadow-md p-6">

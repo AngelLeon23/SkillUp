@@ -21,11 +21,11 @@ export const getEnrollments = async () => {
 
   const { data, error } = await supabase
     .from('inscripciones')
-    .select('id_curso, porcentaje_progreso');
+    .select('id_curso, porcentaje_progreso')
+    .eq('id_usuario', user.id); // ← esto faltaba
 
   if (error) return {};
 
-  // Convertimos el formato de la BD al formato que espera tu App
   const enrollmentsMap = {};
   data.forEach(item => {
     enrollmentsMap[item.id_curso] = item.porcentaje_progreso;
@@ -76,4 +76,81 @@ export const updateProgress = async (courseId, progress) => {
     .eq('id_curso', courseId);
 
   if (error) console.error("Error al actualizar progreso:", error.message);
+};
+
+
+
+// Generar certificado al completar el curso
+export const generarCertificado = async (courseId) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Usar maybeSingle() en lugar de single() para evitar el 406
+  const { data: inscripcion, error: errInsc } = await supabase
+    .from('inscripciones')
+    .select('id_inscripcion')
+    .eq('id_usuario', user.id)
+    .eq('id_curso', courseId)
+    .maybeSingle();
+
+  console.log('Inscripcion encontrada:', inscripcion, errInsc);
+  if (!inscripcion) return null;
+
+  // Verificar si ya existe certificado
+  const { data: existing } = await supabase
+    .from('certificados')
+    .select('*')
+    .eq('id_inscripcion', inscripcion.id_inscripcion)
+    .maybeSingle();
+
+  if (existing) return existing;
+
+  // Crear certificado
+  const codigo = `CERT-${user.id.slice(0, 8).toUpperCase()}-${courseId}-${Date.now()}`;
+  const hoy = new Date();
+  const vencimiento = new Date();
+  vencimiento.setFullYear(hoy.getFullYear() + 2);
+
+  const { data: certificado, error: errCert } = await supabase
+    .from('certificados')
+    .insert({
+      id_inscripcion: inscripcion.id_inscripcion,
+      codigo_qr_validacion: codigo,
+      fecha_emision: hoy.toISOString().split('T')[0],
+      vencimiento: vencimiento.toISOString().split('T')[0],
+    })
+    .select()
+    .maybeSingle();
+
+  console.log('Certificado creado:', certificado, errCert);
+  return certificado;
+};
+
+// Obtener certificados del usuario
+export const getCertificados = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Primero obtenemos las inscripciones del usuario
+  const { data: inscripciones } = await supabase
+    .from('inscripciones')
+    .select('id_inscripcion')
+    .eq('id_usuario', user.id);
+
+  if (!inscripciones || inscripciones.length === 0) return [];
+
+  const inscripcionIds = inscripciones.map(i => i.id_inscripcion);
+
+  const { data } = await supabase
+    .from('certificados')
+    .select(`
+      *,
+      inscripciones (
+        id_curso,
+        cursos ( nombre )
+      )
+    `)
+    .in('id_inscripcion', inscripcionIds);
+
+  return data ?? [];
 };

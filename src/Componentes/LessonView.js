@@ -2,21 +2,20 @@
 import { ArrowLeft, ChevronDown, ChevronUp, PlayCircle, FileText, ChevronRight, ClipboardList } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ModuleQuiz from './ModuleQuiz';
-import { enrollCourse } from '@/lib/session';
+import FinalExam from './FinalExam';
+import { enrollCourse, updateProgress } from '@/lib/session';
 
 export default function LessonView({ course, onBack }) {
-  // Iniciamos en null para evitar el error de "undefined"
   const [expandedModule, setExpandedModule] = useState(null);
   const [activeLesson, setActiveLesson] = useState(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [activeModuleForQuiz, setActiveModuleForQuiz] = useState(null);
+  const [showFinalExam, setShowFinalExam] = useState(false);
 
-  // Sincronizamos los datos cuando el curso termina de cargar desde Supabase
   useEffect(() => {
     if (course?.modulesList?.length > 0) {
       setExpandedModule(course.modulesList[0].id);
       setActiveLesson(course.modulesList[0].lessons[0]);
-      // Inscribir al usuario
       enrollCourse(course.id);
     }
   }, [course]);
@@ -30,7 +29,7 @@ export default function LessonView({ course, onBack }) {
     const allLessons = course.modulesList.flatMap(m => m.lessons);
     const currentIndex = allLessons.findIndex(l => l.id === activeLesson.id);
     const currentModule = getCurrentModule();
-    
+
     const isLastInModule =
       currentModule?.lessons[currentModule.lessons.length - 1]?.id === activeLesson.id;
 
@@ -43,23 +42,35 @@ export default function LessonView({ course, onBack }) {
     }
   };
 
-  const handlePassQuiz = () => {
+  const handlePassQuiz = async () => {
     const allLessons = course.modulesList.flatMap(m => m.lessons);
     const currentIndex = allLessons.findIndex(l => l.id === activeLesson.id);
-    setShowQuiz(false);
-    if (currentIndex < allLessons.length - 1) {
-      setActiveLesson(allLessons[currentIndex + 1]);
+
+    const totalModules = course.modulesList.length;
+    const currentModuleIndex = course.modulesList.findIndex(m => m.id === activeModuleForQuiz.id);
+    const modulesCompleted = currentModuleIndex + 1;
+    const newProgress = Math.round((modulesCompleted / totalModules) * 100);
+    await updateProgress(course.id, newProgress);
+
+    const isLastModule = currentModuleIndex === totalModules - 1;
+
+    if (isLastModule) {
+      setShowFinalExam(true);
+      setShowQuiz(false);
+    } else {
+      setShowQuiz(false);
+      if (currentIndex < allLessons.length - 1) {
+        setActiveLesson(allLessons[currentIndex + 1]);
+      }
     }
   };
 
-  // Si aún no hay lección activa, mostramos carga para evitar el error 'id'
-  if (!activeLesson) {
+  if (!activeLesson && !showFinalExam) {
     return <div className="p-20 text-center font-bold text-green-700">Preparando lecciones...</div>;
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* ... (Todo tu código de botones y diseño se queda igual abajo) ... */}
       <button onClick={onBack} className="flex items-center gap-2 text-green-700 hover:text-green-600 mb-6 font-medium">
         <ArrowLeft className="w-4 h-4" /> Catálogo de cursos
       </button>
@@ -70,6 +81,7 @@ export default function LessonView({ course, onBack }) {
       </div>
 
       <div className="flex gap-6">
+        {/* Sidebar */}
         <div className="w-80 flex-shrink-0">
           <div className="space-y-2">
             {course.modulesList.map((module, moduleIndex) => (
@@ -78,19 +90,36 @@ export default function LessonView({ course, onBack }) {
                   onClick={() => setExpandedModule(expandedModule === module.id ? null : module.id)}
                   className="w-full px-4 py-3 bg-white hover:bg-gray-50 flex items-center justify-between text-left"
                 >
-                  <span className="font-medium text-gray-900 text-sm">Módulo {moduleIndex + 1}: {module.title}</span>
-                  {expandedModule === module.id ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  <span className="font-medium text-gray-900 text-sm">
+                    Módulo {moduleIndex + 1}: {module.title}
+                  </span>
+                  {expandedModule === module.id
+                    ? <ChevronUp className="w-4 h-4 text-gray-500" />
+                    : <ChevronDown className="w-4 h-4 text-gray-500" />
+                  }
                 </button>
                 {expandedModule === module.id && (
                   <div className="border-t border-gray-200">
                     {module.lessons.map((lesson) => (
                       <button
                         key={lesson.id}
-                        onClick={() => { setActiveLesson(lesson); setShowQuiz(false); }}
-                        className={`w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-gray-50 transition-colors ${activeLesson?.id === lesson.id && !showQuiz ? 'bg-green-50 border-l-4 border-green-700' : ''}`}
+                        onClick={() => { setActiveLesson(lesson); setShowQuiz(false); setShowFinalExam(false); }}
+                        className={`w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-gray-50 transition-colors ${
+                          activeLesson?.id === lesson.id && !showQuiz && !showFinalExam
+                            ? 'bg-green-50 border-l-4 border-green-700'
+                            : ''
+                        }`}
                       >
-                        <div className="mt-0.5">{lesson.type === 'video' ? <PlayCircle className="w-4 h-4 text-green-700" /> : <FileText className="w-4 h-4 text-green-700" />}</div>
-                        <div className="flex-1"><p className="text-sm text-gray-900">{lesson.title}</p><p className="text-xs text-gray-500">{lesson.duration}</p></div>
+                        <div className="mt-0.5">
+                          {lesson.type === 'video'
+                            ? <PlayCircle className="w-4 h-4 text-green-700" />
+                            : <FileText className="w-4 h-4 text-green-700" />
+                          }
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-900">{lesson.title}</p>
+                          <p className="text-xs text-gray-500">{lesson.duration}</p>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -100,22 +129,39 @@ export default function LessonView({ course, onBack }) {
           </div>
         </div>
 
+        {/* Main content */}
         <div className="flex-1">
-          {showQuiz && activeModuleForQuiz?.quiz ? (
+          {showFinalExam ? (
+            <FinalExam
+              courseId={course.id}
+              onPass={() => {
+                window.location.href = '/catalogo';
+              }}
+            />
+          ) : showQuiz && activeModuleForQuiz?.quiz ? (
             <ModuleQuiz quiz={activeModuleForQuiz.quiz} onPass={handlePassQuiz} />
           ) : (
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="bg-green-700 text-white px-6 py-4"><h2 className="text-lg font-semibold">{activeLesson.title}</h2></div>
+              <div className="bg-green-700 text-white px-6 py-4">
+                <h2 className="text-lg font-semibold">{activeLesson.title}</h2>
+              </div>
               <div className="p-6">
                 {activeLesson.type === 'video' && activeLesson.videoUrl && (
-                  <div className="mb-6"><div className="aspect-video bg-black rounded-lg overflow-hidden">
-                    <iframe src={activeLesson.videoUrl} className="w-full h-full" allowFullScreen />
-                  </div></div>
+                  <div className="mb-6">
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                      <iframe src={activeLesson.videoUrl} className="w-full h-full" allowFullScreen />
+                    </div>
+                  </div>
                 )}
-                <div className="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-line">{activeLesson.content}</div>
+                <div className="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
+                  {activeLesson.content}
+                </div>
               </div>
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-                <button onClick={handleNext} className="flex items-center gap-2 px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-600 transition-colors font-medium">
+                <button
+                  onClick={handleNext}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+                >
                   {(() => {
                     const currentModule = getCurrentModule();
                     const isLastInModule = currentModule?.lessons[currentModule.lessons.length - 1]?.id === activeLesson.id;
