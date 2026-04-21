@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import UserProfile from "@/Componentes/UserProfile";
-import { getCurrentUser, getEnrollments, getCertificados } from "@/lib/session";
+import { getCurrentUser, getEnrollments, getCertificados, getActividad } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
 export default function PerfilPage() {
@@ -10,9 +10,12 @@ export default function PerfilPage() {
   const [userProgress, setUserProgress] = useState({});
   const [certificados, setCertificados] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actividad, setActividad] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
+      const acts = await getActividad();
+setActividad(acts);
       try {
         const profile = await getCurrentUser();
         if (profile) {

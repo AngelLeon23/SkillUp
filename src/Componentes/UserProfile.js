@@ -2,7 +2,8 @@
 import { User, Mail, Calendar, Award, BookOpen, CheckCircle2, Edit } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function UserProfile({ user, userProgress, courses, certificados }) {
+
+export default function UserProfile({ user, userProgress, courses, certificados = [], actividad = [] }) {
   const router = useRouter();
   const enrolledCourses = Object.keys(userProgress).filter((id) => userProgress[id] > 0).length;
   const completedCourses = Object.keys(userProgress).filter((id) => userProgress[id] === 100).length;
@@ -20,26 +21,17 @@ export default function UserProfile({ user, userProgress, courses, certificados 
       }))
     : [];
 
-  const recentActivity = [
-    {
-      id: 1,
-      action: 'Completaste',
-      item: 'Módulo 1: Introducción a SSPA',
-      date: '2 días atrás',
-    },
-    {
-      id: 2,
-      action: 'Iniciaste',
-      item: 'Curso: Primeros Auxilios Básicos',
-      date: '5 días atrás',
-    },
-    {
-      id: 3,
-      action: 'Completaste',
-      item: 'Curso: Uso Correcto de EPP',
-      date: '1 semana atrás',
-    },
-  ];
+  const recentActivity = actividad.length > 0
+    ? actividad.map((act) => ({
+        id: act.id_actividad,
+        action: act.tipo === 'curso' ? 'Iniciaste' : act.tipo === 'certificado' ? 'Obtuviste' : 'Completaste',
+        item: act.descripcion,
+        date: new Date(act.fecha).toLocaleDateString('es-MX', {
+          day: 'numeric',
+          month: 'long',
+        }),
+      }))
+    : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

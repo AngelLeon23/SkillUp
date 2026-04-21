@@ -154,3 +154,29 @@ export const getCertificados = async () => {
 
   return data ?? [];
 };
+
+
+export const logActividad = async (tipo, descripcion) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from('actividad').insert({
+    id_usuario: user.id,
+    tipo,
+    descripcion,
+  });
+};
+
+export const getActividad = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from('actividad')
+    .select('*')
+    .eq('id_usuario', user.id)
+    .order('fecha', { ascending: false })
+    .limit(5);
+
+  return data ?? [];
+};

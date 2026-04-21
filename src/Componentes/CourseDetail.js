@@ -3,12 +3,22 @@ import { ArrowLeft, Clock, BookOpen, Award, CheckCircle2, Circle, PlayCircle } f
 import { useState } from 'react';
 
 export default function CourseDetail({ course, progress, onBack, onStartLesson, isEnrolled, onEnroll }) {
+  // ✅ CORRECCIÓN 1: Evita que Vercel truene si 'course' aún no carga durante el build
+  if (!course || !course.modulesList) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+        <p className="text-gray-500 animate-pulse">Cargando detalles del curso...</p>
+      </div>
+    );
+  }
+
+  // ✅ CORRECCIÓN 2: Uso de ?. para evitar errores de "undefined"
   const [expandedModule, setExpandedModule] = useState(course.modulesList[0]?.id);
 
   const completedModules = course.modulesList.filter(m => m.completed).length;
-  const totalLessons = course.modulesList.reduce((acc, m) => acc + m.lessons.length, 0);
+  const totalLessons = course.modulesList.reduce((acc, m) => acc + (m.lessons?.length || 0), 0);
   const completedLessons = course.modulesList.reduce(
-    (acc, m) => acc + m.lessons.filter(l => l.completed).length,
+    (acc, m) => acc + (m.lessons?.filter(l => l.completed).length || 0),
     0
   );
 
@@ -67,7 +77,6 @@ export default function CourseDetail({ course, progress, onBack, onStartLesson, 
               </div>
             </div>
 
-            {/* Progreso o botón inscripción */}
             {isEnrolled ? (
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
@@ -98,7 +107,8 @@ export default function CourseDetail({ course, progress, onBack, onStartLesson, 
       <div className="bg-white rounded-xl shadow-md p-6 mb-8">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Objetivos del Curso</h2>
         <ul className="space-y-3">
-          {course.objectives.map((objective, index) => (
+          {/* ✅ CORRECCIÓN 3: ?.map */}
+          {course.objectives?.map((objective, index) => (
             <li key={index} className="flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <span className="text-gray-700">{objective}</span>
@@ -110,7 +120,8 @@ export default function CourseDetail({ course, progress, onBack, onStartLesson, 
       <div className="bg-white rounded-xl shadow-md p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Contenido del Curso</h2>
         <div className="space-y-4">
-          {course.modulesList.map((module, moduleIndex) => (
+          {/* ✅ CORRECCIÓN 4: ?.map */}
+          {course.modulesList?.map((module, moduleIndex) => (
             <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setExpandedModule(expandedModule === module.id ? null : module.id)}
@@ -125,7 +136,7 @@ export default function CourseDetail({ course, progress, onBack, onStartLesson, 
                   <div className="text-left">
                     <h3 className="font-semibold text-gray-900">{module.title}</h3>
                     <p className="text-sm text-gray-500">
-                      {module.lessons.length} lecciones • {module.duration}
+                      {module.lessons?.length || 0} lecciones • {module.duration}
                     </p>
                   </div>
                 </div>
@@ -143,7 +154,8 @@ export default function CourseDetail({ course, progress, onBack, onStartLesson, 
               {expandedModule === module.id && (
                 <div className="px-6 py-4 bg-white">
                   <div className="space-y-3">
-                    {module.lessons.map((lesson) => (
+                    {/* ✅ CORRECCIÓN 5: ?.map */}
+                    {module.lessons?.map((lesson) => (
                       <div
                         key={lesson.id}
                         className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
@@ -161,7 +173,6 @@ export default function CourseDetail({ course, progress, onBack, onStartLesson, 
                           </div>
                         </div>
 
-                        {/* Botón solo visible si está inscrito */}
                         {isEnrolled && (
                           <button
                             onClick={() => onStartLesson(course.id, module.id, lesson.id)}
